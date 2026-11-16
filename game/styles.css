@@ -1,0 +1,25 @@
+/* Gloombloom page shell: the canvas fills the window over the same deep indigo the garden
+   fades into, letterboxed by the script so the 1280 by 800 field keeps its shape. */
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #070a1a;
+}
+
+#game {
+  position: fixed;
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* Read aloud, never shown: the status line screen readers announce. */
+#status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
