@@ -12,7 +12,7 @@
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
@@ -39,3 +39,49 @@ writeFileSync(
     game_path_max_bytes: 1000,
   }),
 );
+
+// Read-back pass over what was just handed in. The dossier write above is the
+// deliverable, but a silent copy mistake (a missing screenshot, a truncated
+// game file) would only surface later, in the judge's container. So before
+// exiting, walk the output tree once, tally each top-level entry on its own,
+// and confirm the dossier is actually there. Nothing is written here; this is
+// a report to stdout only, so the bytes under the output dir stay untouched.
+function summarizeOutput(outputDir) {
+  const tally = new Map();
+  const walk = (dir, bucket) => {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) {
+        walk(full, bucket);
+      } else {
+        bucket.files += 1;
+        bucket.bytes += statSync(full).size;
+      }
+    }
+  };
+  for (const entry of readdirSync(outputDir).sort()) {
+    const bucket = { files: 0, bytes: 0 };
+    const full = join(outputDir, entry);
+    if (statSync(full).isDirectory()) {
+      walk(full, bucket);
+    } else {
+      bucket.files = 1;
+      bucket.bytes = statSync(full).size;
+    }
+    tally.set(entry, bucket);
+  }
+  if (!tally.has('dossier.json')) {
+    throw new Error(`summarizeOutput: dossier.json missing from ${outputDir}`);
+  }
+  let totalFiles = 0;
+  let totalBytes = 0;
+  console.log(`hand-in summary for ${outputDir}:`);
+  for (const [entry, bucket] of tally) {
+    totalFiles += bucket.files;
+    totalBytes += bucket.bytes;
+    console.log(`  ${entry}: ${bucket.files} file(s), ${bucket.bytes} byte(s)`);
+  }
+  console.log(`  total: ${totalFiles} file(s), ${totalBytes} byte(s); dossier.json present`);
+}
+
+summarizeOutput(out);
